@@ -1,0 +1,9 @@
+{% extends "mail/base.html" %}
+
+{% block body %}
+Hi {{ user.first_name }} and thanks for registering to The Socialnetwork!
+
+To confirm your registration, please click on this link:
+{{ config.HOSTNAME }}/confirm/{{ user.username }}/{{ user.change_configuration.confirmation_code }}
+
+{% endblock %}
