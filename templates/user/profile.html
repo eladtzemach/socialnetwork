@@ -40,11 +40,32 @@
         
         {% if logged_user and (rel == "FRIENDS_APPROVED" or logged_user == user) %}
         <!-- post text input -->
-
+        <div class="row feed-message">
+          {% if error %}
+          <div class="alert alert-danger" role="alert">{{ error }}</div>
+          {% endif %}
+          
+          {% from "_formhelpers.html" import render_field %}
+          <form method="POST" action={{ url_for('feed_app.add_message') }} role="form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+              {{ form.images(class='form-control') }}
+              {{ form.post(class='form-control', rows=3) }}
+            </div>
+            
+            <input type="hidden" name="to_user" value="{{ user.username }}" />
+            <button type="submit" class="btn btn-primary pull-right">Post</button>
+          
+          </form>
+          </div> <!-- feed-message -->
           <!-- post text input -->
           {% endif %}
         
-
+          {% from "feed/_feed_messages.html" import render_feed_message %}
+          {% for message in profile_messages %}
+            {{ render_feed_message(message) }}
+          {% endfor %}
         
       </div> <!-- col-md-9 -->
     

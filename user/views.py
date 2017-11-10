@@ -9,6 +9,9 @@ from werkzeug import secure_filename
 from settings import UPLOAD_FOLDER
 from utilities.imaging import thumbnail_process
 from relationship.models import Relationship
+from feed.forms import FeedPostForm
+from mongoengine import Q
+from feed.models import Message, POST
 
 
 user_app = Blueprint('user_app', __name__)
@@ -35,7 +38,7 @@ def login():
                     next = session.get('next')
                     session.pop('next')
                     return redirect(next)
-                return 'User logged in'
+                return redirect(url_for('home_app.home'))
             else:
                 user = None
     
@@ -69,7 +72,7 @@ def register():
         body_text = render_template('mail/user/register.txt', user=user)
         email(user.email, "Welcome!", body_html, body_text)
         user.save()
-        return "success!"
+        return redirect(url_for('home_app.home'))
         
     return render_template('user/register.html', form=form)
     
@@ -79,14 +82,16 @@ def logout():
     session.pop('username') # delete username session
     return redirect(url_for('user_app.login'))
  
-@user_app.route('/<username>/friends/<int:page>', endpoint='profile-friends-page')   
+@user_app.route('/<username>/friends/<int:friends_page_number>', endpoint='profile-friends-page')   
 @user_app.route('/<username>/friends', endpoint='profile-friends')
 @user_app.route('/<username>')
-def profile(username, page=1):
+def profile(username, friends_page_number=1):
     friends_page = False
     logged_user=None
     rel = None
     user = User.objects.filter(username=username).first()
+    
+    profile_messages = []
     
     if user:
         if session.get('username'):
@@ -104,13 +109,24 @@ def profile(username, page=1):
         
         if 'friends' in request.url:
             friends_page = True
-            friends = friends.paginate(page=page, per_page=3)
+            friends = friends.paginate(page=friends_page_number, per_page=3)
         else:
             friends = friends[:5]
+            
+        form = FeedPostForm()
+        
+        # get user messages if friends or self
+        if logged_user and (rel == "SAME" or rel == "FRIENDS_APPROVED"):
+            profile_messages = Message.objects.filter(
+                Q(from_user=user) | Q(to_user=user),
+                message_type=POST,
+                ).order_by('-create_date')[:10]
+        
     
         return render_template('user/profile.html', user=user, rel=rel, 
             logged_user=logged_user, friends=friends, friends_total=friends_total,
-            friends_page=friends_page,)
+            friends_page_number=friends_page_number,
+            form=form, profile_messages=profile_messages)
     else:
         abort(404)
         
